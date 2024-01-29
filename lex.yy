@@ -76,7 +76,7 @@ stringLegalChars            		[\x20-\x7E\x09\x0A\x0D]{-}["\n\r\\]
 <STRING>(\\r)               		printf("\r");
 <STRING>(\\\")                    	printf("\"");
 <STRING>(\\0)               		printf("\0");
-<STRING>(\\x([2-7][0-9a-fA-F]))    	printf(yytext);
+<STRING>(\\x([2-7][0-9a-fA-F]))    	printf("%c", strtol(yytext + 2, NULL, 16));
 
 <STRING>(\\x([8-9][0-9a-fA-F]))     { printf("Error undefined escape sequence %s\n", (yytext + 1)); exit(0); }
 <STRING>(\\) 		        		{ /* ERROR */; exit(0); }
