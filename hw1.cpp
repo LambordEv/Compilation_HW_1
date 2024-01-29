@@ -1,6 +1,6 @@
 #include "tokens.hpp"
 
-extern "C" int yylex();
+//extern "C" int yylex();
 
 int main()
 {
