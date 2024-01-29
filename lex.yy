@@ -25,7 +25,7 @@ letter              				[a-zA-Z]
 relop               				(==|!=|<=|>=|<|>)
 binop               				(\+|\-|\*|\/)
 id                  				({letter}+)(({decimalDigit}|{letter})*)
-num                 				(0|([1-9]+{decimalDigit}*))
+num                 				((0|([1-9]+{decimalDigit}*))({whitespace}+|$))
 			
 %x COMMENT		
 enterComment        				"\/\/"
@@ -69,14 +69,14 @@ stringLegalChars            		[\x20-\x7E\x09\x0A\x0D]{-}["\n\r\\]
 
 
 {enterString}        				{ BEGIN(STRING); printString(); }
-<STRING>{stringLegalChars}* 		printf("%s\n", yytext);
+<STRING>{stringLegalChars}* 		printf("%s", yytext);
 <STRING>(\\t)               		printf("\t");
 <STRING>(\\n)               		printf("\n");
 <STRING>(\\\\)              		printf("\\");
 <STRING>(\\r)               		printf("\r");
 <STRING>(\\\")                    	printf("\"");
 <STRING>(\\0)               		printf("\0");
-<STRING>(\\x([2-7][0-9a-fA-F]))    	printf(yytext);
+<STRING>(\\x([2-7][0-9a-fA-F]))    { printf(yytext); }
 
 <STRING>(\\x([8-9][0-9a-fA-F]))     { printf("Error undefined escape sequence %s\n", (yytext + 1)); exit(0); }
 <STRING>(\\) 		        		{ /* ERROR */; exit(0); }
