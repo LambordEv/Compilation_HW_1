@@ -1,5 +1,7 @@
 #include "tokens.hpp"
 
+extern "C" int yylex();
+
 int main()
 {
 	int token;

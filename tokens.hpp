@@ -32,39 +32,8 @@
     STRING      = 28
   }tokentype;
 
-  const char* tokenName[] = {
-    "VOID",
-    "INT",
-    "BYTE",
-    "B",
-    "BOOL",
-    "AND",
-    "OR",
-    "NOT",
-    "TRUE",
-    "FALSE",
-    "RETURN",
-    "IF",
-    "ELSE",
-    "WHILE",
-    "BREAK",
-    "CONTINUE",
-    "SC",
-    "LPAREN",
-    "RPAREN",
-    "LBRACE",
-    "RBRACE",
-    "ASSIGN",
-    "RELOP",
-    "BINOP",
-    "COMMENT",
-    "ID",
-    "NUM",
-    "STRING"
-  };
-
   extern int yylineno;
   extern char* yytext;
-  extern size_t yyleng;
-  extern int yylex();
+  extern int yyleng;
+  //extern int yylex();
 #endif /* TOKENS_HPP_ */
