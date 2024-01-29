@@ -5,9 +5,9 @@
 #include "tokens.hpp"
 
 /*------- Function Declarion Section -------*/
-void printString(void);
 void printRecognisedToken(const char* whichToken);
 void printCommentToken(void);
+void accumulateStringToken(const char* toAdd);
 
 %}
 
@@ -68,32 +68,26 @@ stringLegalChars            		[\x20-\x7E\x09\x0A\x0D]{-}["\n\r\\]
 <COMMENT>.*           				{ printCommentToken(); BEGIN(INITIAL); }
 
 
-{enterString}        				{ BEGIN(STRING); printString(); }
-<STRING>{stringLegalChars}* 		printf("%s", yytext);
-<STRING>(\\t)               		printf("\t");
-<STRING>(\\n)               		printf("\n");
-<STRING>(\\\\)              		printf("\\");
-<STRING>(\\r)               		printf("\r");
-<STRING>(\\\")                    	printf("\"");
-<STRING>(\\0)               		printf("\0");
-<STRING>(\\x([2-7][0-9a-fA-F]))    	printf("%c", strtol(yytext + 2, NULL, 16));
+{enterString}        				{ BEGIN(STRING); }
+<STRING>{stringLegalChars}* 		accumulateStringToken(yytext);
+<STRING>(\\t)               		accumulateStringToken("\t");
+<STRING>(\\n)               		accumulateStringToken("\n");
+<STRING>(\\\\)              		accumulateStringToken("\\");
+<STRING>(\\r)               		accumulateStringToken("\r");
+<STRING>(\\\")                    	accumulateStringToken("\"");
+<STRING>(\\0)               		accumulateStringToken("\0");
+<STRING>(\\x([2-7][0-9a-fA-F]))    	{ char toPrint = strtol(yytext + 2, NULL, 16); accumulateStringToken(&toPrint); }
 
 <STRING>(\\x([8-9][0-9a-fA-F]))     { printf("Error undefined escape sequence %s\n", (yytext + 1)); exit(0); }
-<STRING>(\\) 		        		{ /* ERROR */; exit(0); }
+<STRING>(\\.) 		        		{ printf("Error undefined escape sequence %s\n", (yytext + 1)); exit(0); }
 <STRING>(\n) 		        		{ printf("Error unclosed string\n"); exit(0); }
 <STRING>(\r) 		        		{ printf("Error unclosed string\n"); exit(0); }
-<STRING>{enterString}  				{ printf("\n"); BEGIN(INITIAL); }
+<STRING>{enterString}  				{ accumulateStringToken(NULL); BEGIN(INITIAL); }
 <STRING>.                           { printf("Error undefined escape sequence %s\n", (yytext + 1)); exit(0); }
 
 .                                   { printf("Im Here, help me!\n"); exit(0); }
 
 %%
-
-void printString(void)
-{
-    printf("%d ", yylineno);
-    printf("%s ", "STRING");
-}
 
 void printRecognisedToken(const char* whichToken)
 {
@@ -107,4 +101,24 @@ void printCommentToken(void)
     printf("%d ", yylineno);
     printf("%s ", "COMMENT");
     printf("//\n");
+}
+
+void accumulateStringToken(const char* toAdd)
+{
+    static char accumulated[2096] = "";
+    static int currStringLen = 0;
+
+    if(NULL == toAdd)
+    {
+        printf("%d ", yylineno);
+        printf("%s ", "STRING");
+        printf("%s\n", accumulated);
+        currStringLen = 0;
+    }
+    else
+    {
+        int currAddingLen = strlen(toAdd);
+        sprintf(accumulated + currStringLen, toAdd, currAddingLen);
+        currStringLen += currAddingLen;
+    }
 }
