@@ -7,7 +7,8 @@
 /*------- Function Declarion Section -------*/
 void printRecognisedToken(const char* whichToken);
 void printCommentToken(void);
-void accumulateStringToken(const char* toAdd);
+void accumulateStringToken(const char* toAdd, int toAddLen);
+void checkAsciiHexValueRange(char toCheck);
 
 %}
 
@@ -32,11 +33,11 @@ enterComment        				       "\/\/"
 %x STRING				       
 enterString         				       \"
 stringLegalChars            		       ([\x20-\x7e\x09\x0a\x0d]{-}["\n\r\\])
+stringIlegalChars                          ([^ ]{-}{stringLegalChars})
     
 %x STRING_ESCAPE       
 escapeChar                                 "\\"
-escapeLegalAsciiCode                       (x((7[0-9a-eA-e])|([2-6][0-9a-fA-F])|(0[9aAdD])))
-escapeIlegalAsciiCode                      (x((7[fF])|([0189a-fA-F][0-9a-fA-F])))
+twoDigitsHexNum                            (x([0-9a-fA-F]{2}))
     
 %%		       
 "void"               				       printRecognisedToken("VOID");
@@ -73,22 +74,23 @@ escapeIlegalAsciiCode                      (x((7[fF])|([0189a-fA-F][0-9a-fA-F]))
 <COMMENT>.                                 ;
 
 {enterString}        				       { BEGIN(STRING); }
-<STRING>{enterString}  				       { accumulateStringToken(NULL); BEGIN(INITIAL); }
+<STRING>{enterString}  				       { accumulateStringToken(NULL, 0); BEGIN(INITIAL); }
 <STRING>(\n) 		        		       { printf("Error unclosed string\n"); exit(0); }
 <STRING>(\r) 		        		       { printf("Error unclosed string\n"); exit(0); }
 
 <STRING>{escapeChar}                       { BEGIN(STRING_ESCAPE); }
-<STRING_ESCAPE>[t]                         { accumulateStringToken("\t"); BEGIN(STRING); }
-<STRING_ESCAPE>[n]                         { accumulateStringToken("\n"); BEGIN(STRING); }
-<STRING_ESCAPE>[r]                         { accumulateStringToken("\r"); BEGIN(STRING); }
-<STRING_ESCAPE>["]                         { accumulateStringToken("\""); BEGIN(STRING); }
-<STRING_ESCAPE>[0]                         { accumulateStringToken("\0"); BEGIN(STRING); }
-<STRING_ESCAPE>[\\]                        { accumulateStringToken("\\"); BEGIN(STRING); }
-<STRING_ESCAPE>{escapeLegalAsciiCode}      { char toPrint = strtol(&yytext[1], NULL, 16); accumulateStringToken(&toPrint); BEGIN(STRING); }
-<STRING_ESCAPE>{escapeIlegalAsciiCode}     { printf("Error undefined escape sequence %s\n", yytext); exit(0); }
+<STRING_ESCAPE>[t]                         { accumulateStringToken("\t", 1); BEGIN(STRING); }
+<STRING_ESCAPE>[n]                         { accumulateStringToken("\n", 1); BEGIN(STRING); }
+<STRING_ESCAPE>[r]                         { accumulateStringToken("\r", 1); BEGIN(STRING); }
+<STRING_ESCAPE>["]                         { accumulateStringToken("\"", 1); BEGIN(STRING); }
+<STRING_ESCAPE>[0]                         { accumulateStringToken("\0", 1); BEGIN(STRING); }
+<STRING_ESCAPE>[\\]                        { accumulateStringToken("\\", 1); BEGIN(STRING); }
+<STRING_ESCAPE>{twoDigitsHexNum}           { char toPrint = strtol(&yytext[1], NULL, 16); checkAsciiHexValueRange(toPrint); BEGIN(STRING); }
+<STRING_ESCAPE>x..                         { printf("Error undefined escape sequence %s\n", yytext); exit(0); }
 <STRING_ESCAPE>.                           { printf("Error undefined escape sequence %s\n", yytext); exit(0); }
 
-<STRING>{stringLegalChars}         		   { accumulateStringToken(yytext); }
+<STRING>{stringLegalChars}         		   { accumulateStringToken(yytext, yyleng); }
+<STRING>[^"]                               { printf("Error %s\n", yytext); exit(0); }
 
 .                                          { printf("Error %s\n", yytext); exit(0); }
 
@@ -107,22 +109,37 @@ void printCommentToken(void)
     printf("//\n");
 }
 
-void accumulateStringToken(const char* toAdd)
+void accumulateStringToken(const char* toAdd, int toAddLen)
 {
     static char accumulated[2096] = "";
     static int currStringLen = 0;
 
     if(NULL == toAdd)
     {
+        char acctualToPrint[2096] = "";
+        memcpy(acctualToPrint, accumulated, currStringLen);
+
         printf("%d ", yylineno);
         printf("%s ", "STRING");
-        printf("%s\n", accumulated);
+        printf("%s\n", acctualToPrint);
         currStringLen = 0;
     }
     else
     {
-        int currAddingLen = strlen(toAdd);
-        sprintf(accumulated + currStringLen, toAdd, currAddingLen);
-        currStringLen += currAddingLen;
+        memcpy(accumulated + currStringLen, toAdd, toAddLen);
+        currStringLen += toAddLen;
+    }
+}
+
+void checkAsciiHexValueRange(char toCheck)
+{
+    if(0x0A == toCheck || 0x0D == toCheck || 0x09 == toCheck || (0x20 <= toCheck && 0x7E >= toCheck))
+    {
+        accumulateStringToken(&toCheck, 1);
+    }
+    else
+    {
+        printf("Error undefined escape sequence %s\n", yytext); 
+        exit(0);
     }
 }
