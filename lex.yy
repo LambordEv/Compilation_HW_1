@@ -9,6 +9,7 @@ void printRecognisedToken(const char* whichToken);
 void printCommentToken(void);
 void accumulateStringToken(const char* toAdd, int toAddLen);
 void checkAsciiHexValueRange(char toCheck);
+void invalidHexEscapeError(const char* theInvalidStr);
 
 %}
 
@@ -86,7 +87,7 @@ twoDigitsHexNum                            (x([0-9a-fA-F]{2}))
 <STRING_ESCAPE>[0]                         { accumulateStringToken("\0", 1); BEGIN(STRING); }
 <STRING_ESCAPE>[\\]                        { accumulateStringToken("\\", 1); BEGIN(STRING); }
 <STRING_ESCAPE>{twoDigitsHexNum}           { char toPrint = strtol(&yytext[1], NULL, 16); checkAsciiHexValueRange(toPrint); BEGIN(STRING); }
-<STRING_ESCAPE>x..                         { printf("Error undefined escape sequence %s\n", yytext); exit(0); }
+<STRING_ESCAPE>x..                         { invalidHexEscapeError(yytext); exit(0); }
 <STRING_ESCAPE>.                           { printf("Error undefined escape sequence %s\n", yytext); exit(0); }
 
 <STRING>{stringLegalChars}         		   { accumulateStringToken(yytext, yyleng); }
@@ -107,6 +108,30 @@ void printCommentToken(void)
     printf("%d ", yylineno);
     printf("%s ", "COMMENT");
     printf("//\n");
+}
+
+void invalidHexEscapeError(const char* theInvalidStr)
+{
+    printf("Error undefined escape sequence x");
+
+    if('\"' != yytext[1]) 
+    {
+        printf("%c", yytext[1]);
+    }
+    else
+    {
+        printf("\n");
+        return;
+    }
+    
+    if('\"' != yytext[2]) 
+    {
+        printf("%c\n", yytext[2]);
+    }
+    else
+    {
+        printf("\n");
+    }
 }
 
 void accumulateStringToken(const char* toAdd, int toAddLen)
